@@ -1,0 +1,12 @@
+[package]
+edition = "2021"
+name = "cargo-features"
+version = "0.1.0"
+
+[dependencies]
+anyhow = "1.0.66"
+cargo = "0.66.0"
+clap = { version = "4.0.29", features = ["derive"] }
+colored = "2.0.0"
+semver = "1.0.14"
+toml = "0.5.9"
