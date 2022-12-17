@@ -2,9 +2,15 @@
 
 Word in progress
 
-## Usage
+## Install
 
 ```bash
+cargo install --git https://github.com/BarbossHack/cargo-features
+```
+
+## Usage
+
+```text
 Display all the active/available features for the specified package
 
 Usage: cargo features [OPTIONS] [CRATE]
