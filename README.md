@@ -1,6 +1,6 @@
 # cargo-features
 
-Word in progress
+Work in progress
 
 ## Install
 
