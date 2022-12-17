@@ -10,6 +10,7 @@ pub struct Package {
     pub version: String,
     pub optional: bool,
     pub active: bool,
+    pub globally_active: bool,
     pub features: Vec<Feature>,
 }
 

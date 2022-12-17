@@ -7,8 +7,9 @@ use semver::Version;
     bin_name = "cargo",
     about = "Display all the active/available features for the specified package"
 )]
-pub enum Command {
-    Features(Cli),
+pub struct Cargo {
+    #[command(flatten)]
+    pub features: Features,
 }
 
 #[derive(Args, Clone)]
@@ -16,7 +17,7 @@ pub enum Command {
     version,
     about = "Display all the active/available features for the specified package"
 )]
-pub struct Cli {
+pub struct Features {
     #[arg(
         short = 'F',
         long,
