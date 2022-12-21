@@ -4,7 +4,7 @@ mod print;
 mod resolver;
 
 use crate::{
-    cli::PackageVer,
+    cli::{Cargo, PackageVer},
     print::pretty_print,
     resolver::{build_export_info, build_ws_resolve},
 };
@@ -13,7 +13,7 @@ use cargo::Config;
 use clap::Parser;
 
 fn main() -> Result<()> {
-    let cli = cli::Cargo::parse().features;
+    let Cargo::Features(cli) = Cargo::parse();
 
     let manifest_path = match cli.manifest_path {
         Some(manifest_path) => manifest_path,

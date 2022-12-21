@@ -7,9 +7,8 @@ use semver::Version;
     bin_name = "cargo",
     about = "Display all the active/available features for the specified package"
 )]
-pub struct Cargo {
-    #[command(flatten)]
-    pub features: Features,
+pub enum Cargo {
+    Features(Features),
 }
 
 #[derive(Args, Clone)]

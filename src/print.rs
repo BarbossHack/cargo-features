@@ -2,11 +2,11 @@ use crate::export_info;
 use colored::{Color, Colorize};
 
 pub fn pretty_print(mut export_info: export_info::ExportInfo) {
-    let active = export_info.root_package.active;
+    let globally_active = export_info.root_package.globally_active;
 
     pretty_print_package(export_info.root_package);
 
-    if !active {
+    if !globally_active {
         return;
     }
 
@@ -18,7 +18,7 @@ pub fn pretty_print(mut export_info: export_info::ExportInfo) {
 
 pub fn pretty_print_package(mut package: export_info::Package) {
     let crate_color = if package.active {
-        Color::Cyan
+        Color::Green
     } else {
         Color::TrueColor {
             r: 153,
@@ -35,7 +35,7 @@ pub fn pretty_print_package(mut package: export_info::Package) {
 
     print!(
         "{}",
-        // FIXME: if optional and not active, the version should be considered as unknown
+        // FIXME: if optional and not active, the version SHOULD be considered as unknown
         format!("`{}`", package.name.bold(),)
             .color(crate_color)
             .underline(),
@@ -71,7 +71,7 @@ pub fn pretty_print_package(mut package: export_info::Package) {
         } else {
             "- ".bright_red()
         };
-        print!("  {}{} = [", icon, feature.name.green());
+        print!("  {}{} = [", icon, feature.name.white());
         let mut childs = feature.childs.to_owned();
         childs.sort();
         childs.iter().enumerate().for_each(|(i, child)| {
