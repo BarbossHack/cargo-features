@@ -53,7 +53,10 @@ fn main() -> Result<()> {
 }
 
 fn parse_manifest(manifest_path: &str) -> Result<(String, String)> {
-    let manifest = std::fs::read_to_string(manifest_path)?.parse::<toml::Value>()?;
+    let manifest = std::fs::read_to_string(manifest_path)
+        .map_err(|_| anyhow!("Could not find a valid Cargo.toml"))?
+        .parse::<toml::Value>()
+        .map_err(|_| anyhow!("Could not find a valid Cargo.toml"))?;
     let manifest_name = manifest["package"]["name"]
         .as_str()
         .ok_or_else(|| anyhow!("Toml package should contains name"))?

@@ -60,8 +60,7 @@ pub fn build_export_info(
 
     match possible_packages.len() {
         0 => bail!(
-            // TODO: maybe get some info from Resolve Graph here
-            "Package '{}' does not exists, or is optional and not active",
+            "Package `{}` does not exists, or is not part of the tree (optional and not active)",
             root_package.name
         ),
         1 => {}
@@ -74,8 +73,7 @@ pub fn build_export_info(
             exit(101);
         }
     }
-    // FIXME: is this root package "active" ?
-    // we have to search for the parent->dependencies, if any...
+
     let root_package = possible_packages
         .first()
         .expect("Can't fail with before check");
@@ -84,14 +82,6 @@ pub fn build_export_info(
     if deps {
         for dep in root_package.dependencies() {
             let active = match (
-                // FIXME: bug
-                // cargo run -- features clap@4.0.29 --deps : unicode-width not active (but features)
-                // cargo tree -i unicode-width : active by cargo, but not by clap, so maybe it's normal that it's not active in clap
-                // what choice to make ?
-                // check if global active with ws_resolves.packages.any(dep) == true
-                // and maybe add a var "activated by another crate"
-
-                // well... pas d'autres choix que de parcourir tout l'arbre du Resolve et de voir s'il est bien de DepKin::Normal
                 ws_resolve.resolved_features.is_dep_activated(
                     root_package.package_id(),
                     FeaturesFor::NormalOrDev,
@@ -106,15 +96,14 @@ pub fn build_export_info(
             };
 
             if dep.kind() == DepKind::Normal {
-                let export_dependency = match ws_resolve.pkg_set.packages().find(|p| {
-                    dep.matches_id(p.package_id())
-                    // p.name() == dep.package_name() && dep.version_req().matches(p.version())
-                }) {
+                let export_dependency = match ws_resolve
+                    .pkg_set
+                    .packages()
+                    .find(|p| dep.matches_id(p.package_id()))
+                {
                     Some(dependency) => {
                         build_package(&ws_resolve, dependency, dep.is_optional(), active)?
                     }
-                    // FIX: dirty, isn't it ?
-                    // maybe use an enum Dep::Active(package) and Dep::NotActive(Dependency)
                     None => export_info::Package {
                         name: dep.package_name().to_string(),
                         version: dep.version_req().to_string(),
@@ -172,6 +161,11 @@ pub fn build_package(
             childs: f.1,
         })
         .collect();
+
+    let globally_active = is_globally_active(ws_resolve, &package.package_id())?;
+    if active && !globally_active {
+        bail!("Package cannot be active by parent, and not globally active");
+    }
 
     Ok(export_info::Package {
         name: package.name().to_string(),
