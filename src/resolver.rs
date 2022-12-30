@@ -1,4 +1,7 @@
-use crate::{cli::PackageVer, export_info};
+use crate::{
+    cli::PackageVer,
+    export_info::{self, Feature, Optional},
+};
 use anyhow::{anyhow, bail, Result};
 use cargo::{
     core::{
@@ -10,7 +13,7 @@ use cargo::{
     ops::WorkspaceResolve,
 };
 use semver::VersionReq;
-use std::{collections::BTreeMap, path::Path, process::exit};
+use std::{collections::BTreeMap, path::Path};
 
 pub fn build_ws_resolve<'cfg>(
     config: &'cfg cargo::util::Config,
@@ -22,6 +25,7 @@ pub fn build_ws_resolve<'cfg>(
     manifest_version: &str,
 ) -> Result<WorkspaceResolve<'cfg>> {
     let ws = Workspace::new(Path::new(&manifest_path), config)?;
+    // TODO: check that CompileKind::Host is the right thing (try to add a dep in cfg(target anroid))
     let requested_kinds = &vec![CompileKind::Host];
     let target_data = RustcTargetData::new(&ws, requested_kinds)?;
     let cli_features =
@@ -65,12 +69,12 @@ pub fn build_export_info(
         ),
         1 => {}
         _ => {
-            println!("There are multiple `{}` packages in your project, and the specification `{}` is ambiguous.", root_package.name, root_package.name);
-            println!("Please re-run this command with `-p <spec>` where `<spec>` is one of the following:");
+            eprintln!("There are multiple `{}` packages in your project, and the specification `{}` is ambiguous.", root_package.name, root_package.name);
+            eprintln!("Please re-run this command with `-p <spec>` where `<spec>` is one of the following:");
             possible_packages
                 .iter()
-                .for_each(|p| println!("  {}@{}", p.name(), p.version()));
-            exit(101);
+                .for_each(|p| eprintln!("  {}@{}", p.name(), p.version()));
+            std::process::exit(1);
         }
     }
 
@@ -111,6 +115,7 @@ pub fn build_export_info(
                         active: false,
                         globally_active: false,
                         features: vec![],
+                        optionals: vec![],
                     },
                 };
                 export_dependencies.push(export_dependency);
@@ -141,9 +146,6 @@ pub fn build_package(
         .iter()
         .map(|(k, v)| (k.to_string(), v.iter().map(|fv| fv.to_string()).collect()))
         .collect();
-    // TODO: add optionnals ? because not displayed by default
-    // if we include (in toml) a feature that active an optional, without "dep:", the optional will be seen as a feature
-    // else if the feature include the optional with the "dep:", this optional won't be included as a feature
 
     let active_features: Vec<String> = match ws_resolve
         .resolved_features
@@ -153,12 +155,17 @@ pub fn build_package(
         None => vec![],
     };
 
-    let export_features = available_features
+    let export_features: Vec<Feature> = available_features
         .into_iter()
-        .map(|f| export_info::Feature {
-            name: f.0.clone(),
-            active: active_features.contains(&f.0),
-            childs: f.1,
+        .map(|(name, childs)| export_info::Feature {
+            name: name.clone(),
+            optional: childs.len().eq(&1)
+                && childs
+                    .first()
+                    .expect("we already checked that len is 1")
+                    .eq(format!("dep:{}", &name).as_str()),
+            active: active_features.contains(&name),
+            childs,
         })
         .collect();
 
@@ -167,14 +174,42 @@ pub fn build_package(
         bail!("Package cannot be active by parent, and not globally active");
     }
 
+    // FIXME: do not include in optionals if another feature has this optional in child, without "dep:"
+    // see `toml` feature in `cargo run -- features --deps`
+    //
+    // well, no, but search for childs where name are in Optionals, and print them in cyan.
+    // Get info of when "dep:" is required (when there is at least one "dep:" ? or never ?)
+    //
+    // if we include (in toml) a feature that active an optional, without "dep:", the optional will be seen as a feature
+    // else if the feature include the optional with the "dep:", this optional won't be included as a feature
+
+    // FIXME: When use dep: syntax, can’t enable dep without dep: (see screenshot)
+    // https://github.com/Riey/cargo-feature/issues/28
+    let optionals = package
+        .dependencies()
+        .iter()
+        .filter(|d| d.is_optional())
+        .map(|d| Optional {
+            name: d.package_name().to_string(),
+            // only search for feature that enable this optional
+            // we don't want to check here if this optional dep is globally active
+            active: export_features.iter().any(|f| {
+                f.active
+                    && f.childs
+                        .iter()
+                        .any(|c| c.eq(format!("dep:{}", d.package_name()).as_str()))
+            }),
+        })
+        .collect();
+
     Ok(export_info::Package {
         name: package.name().to_string(),
         version: package.version().to_string(),
         optional,
         active,
         globally_active: is_globally_active(ws_resolve, &package.package_id())?,
-        // TODO: when adding "optionals" to "features", check if they are active
         features: export_features,
+        optionals,
     })
 }
 

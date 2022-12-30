@@ -1,4 +1,4 @@
-use crate::export_info::{self, Feature};
+use crate::export_info::{self, Feature, Optional};
 use colored::{Color, Colorize};
 
 const LIGHT_RED: Color = Color::TrueColor {
@@ -73,30 +73,38 @@ pub fn pretty_print_package(package: export_info::Package) {
     }
 
     // Print "No features"
-    if package.features.is_empty() {
+    if package.features.is_empty() && package.optionals.is_empty() {
         println!("  {}", "[no features]".color(LIGHT_GREY).italic());
         return;
     }
 
     pretty_print_features(package.features);
+    pretty_print_optionals(package.optionals);
 }
 
 fn pretty_print_features(mut features: Vec<Feature>) {
+    // TODO: optional deps in features should be colored, even without dep:
+    // for example in cargo 0.67.0, there is
+    // vendored-openssl = ["openssl/vendored"]
+    // which should color `openssl/vendored` as this feature could enable the optional `openssl` AND active there `vendored` feature (bonus)
+    // same in clap, `clap_derive` should be colored for
+    // unstable-v5 = ["clap_derive?/unstable-v5", "deprecated"]
     features.sort();
-    features.iter().for_each(|feature| {
-        let icon = if feature.active {
-            "* ".green()
+    features.iter().filter(|f| !f.optional).for_each(|feature| {
+        if feature.active {
+            print!("{}", "  * ".green());
         } else {
-            "- ".bright_red()
-        };
-        let name_colored = if feature.name.eq("default") {
-            feature.name.yellow()
+            print!("{}", "  - ".bright_red());
+        }
+        if feature.name.eq("default") {
+            print!("{}", feature.name.yellow());
         } else {
-            feature.name.normal()
+            print!("{}", feature.name);
         };
-        print!("  {}{} = [", icon, name_colored);
+
         let mut childs = feature.childs.to_owned();
         childs.sort();
+        print!(" = [");
         childs.iter().enumerate().for_each(|(i, child)| {
             let child_str = format!("\"{}\"", child);
             let child_colored = if child.starts_with("dep:") {
@@ -110,5 +118,21 @@ fn pretty_print_features(mut features: Vec<Feature>) {
             }
         });
         println!("]");
+    });
+}
+
+fn pretty_print_optionals(mut optionals: Vec<Optional>) {
+    optionals.sort();
+    optionals.iter().for_each(|optional| {
+        if optional.active {
+            print!("  {} ", "*".green());
+        } else {
+            print!("  {} ", "-".bright_red());
+        }
+        println!(
+            "{} {}",
+            &optional.name.cyan(),
+            "(optional)".color(LIGHT_GREY).italic()
+        );
     });
 }

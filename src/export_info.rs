@@ -12,13 +12,21 @@ pub struct Package {
     pub active: bool,
     pub globally_active: bool,
     pub features: Vec<Feature>,
+    pub optionals: Vec<Optional>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Feature {
     pub name: String,
     pub active: bool,
+    pub optional: bool,
     pub childs: Vec<String>,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Optional {
+    pub name: String,
+    pub active: bool,
 }
 
 impl Ord for Feature {
