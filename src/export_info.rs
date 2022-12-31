@@ -20,7 +20,13 @@ pub struct Feature {
     pub name: String,
     pub active: bool,
     pub optional: bool,
-    pub childs: Vec<String>,
+    pub childs: Vec<Child>,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct Child {
+    pub name: String,
+    pub optional: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]

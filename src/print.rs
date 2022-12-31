@@ -83,42 +83,42 @@ pub fn pretty_print_package(package: export_info::Package) {
 }
 
 fn pretty_print_features(mut features: Vec<Feature>) {
-    // TODO: optional deps in features should be colored, even without dep:
-    // for example in cargo 0.67.0, there is
-    // vendored-openssl = ["openssl/vendored"]
-    // which should color `openssl/vendored` as this feature could enable the optional `openssl` AND active there `vendored` feature (bonus)
-    // same in clap, `clap_derive` should be colored for
-    // unstable-v5 = ["clap_derive?/unstable-v5", "deprecated"]
     features.sort();
-    features.iter().filter(|f| !f.optional).for_each(|feature| {
-        if feature.active {
-            print!("{}", "  * ".green());
-        } else {
-            print!("{}", "  - ".bright_red());
-        }
-        if feature.name.eq("default") {
-            print!("{}", feature.name.yellow());
-        } else {
-            print!("{}", feature.name);
-        };
-
-        let mut childs = feature.childs.to_owned();
-        childs.sort();
-        print!(" = [");
-        childs.iter().enumerate().for_each(|(i, child)| {
-            let child_str = format!("\"{}\"", child);
-            let child_colored = if child.starts_with("dep:") {
-                child_str.cyan()
+    features
+        .iter()
+        // HACK .filter(|f| !f.optional)
+        .for_each(|feature| {
+            if feature.optional {
+                // HACK
+                print!("{}", "  ? ".on_magenta());
+            } else if feature.active {
+                print!("{}", "  * ".green());
             } else {
-                child_str.normal()
-            };
-            print!("{child_colored}");
-            if i + 1 != childs.len() {
-                print!(", ");
+                print!("{}", "  - ".bright_red());
             }
+            if feature.name.eq("default") {
+                print!("{}", feature.name.yellow());
+            } else {
+                print!("{}", feature.name);
+            };
+
+            let mut childs = feature.childs.clone();
+            childs.sort();
+            print!(" = [");
+            childs.iter().enumerate().for_each(|(i, child)| {
+                let child_str = format!("\"{}\"", child.name);
+                let child_colored = if child.optional {
+                    child_str.cyan()
+                } else {
+                    child_str.normal()
+                };
+                print!("{child_colored}");
+                if i + 1 != childs.len() {
+                    print!(", ");
+                }
+            });
+            println!("]");
         });
-        println!("]");
-    });
 }
 
 fn pretty_print_optionals(mut optionals: Vec<Optional>) {

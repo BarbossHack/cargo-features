@@ -1,6 +1,6 @@
 use crate::{
     cli::PackageVer,
-    export_info::{self, Feature, Optional},
+    export_info::{self, Child, Feature, Optional},
 };
 use anyhow::{anyhow, bail, Result};
 use cargo::{
@@ -156,16 +156,27 @@ pub fn build_package(
     };
 
     let export_features: Vec<Feature> = available_features
-        .into_iter()
+        .iter()
         .map(|(name, childs)| export_info::Feature {
-            name: name.clone(),
+            name: name.to_owned(),
             optional: childs.len().eq(&1)
                 && childs
                     .first()
                     .expect("we already checked that len is 1")
-                    .eq(format!("dep:{}", &name).as_str()),
-            active: active_features.contains(&name),
-            childs,
+                    .eq(format!("dep:{}", name).as_str()),
+            active: active_features.contains(name),
+            childs: childs
+                .iter()
+                .map(|child_name| Child {
+                    name: child_name.to_owned(),
+                    optional: child_name.starts_with("dep:")
+                        || package.dependencies().iter().any(|d| {
+                            d.is_optional()
+                                && clean_feature_name(&d.package_name())
+                                    .eq(&clean_feature_name(child_name))
+                        }),
+                })
+                .collect(),
         })
         .collect();
 
@@ -174,7 +185,7 @@ pub fn build_package(
         bail!("Package cannot be active by parent, and not globally active");
     }
 
-    // FIXME: do not include in optionals if another feature has this optional in child, without "dep:"
+    // do not include in optionals if another feature has this optional in child, without "dep:" ??
     // see `toml` feature in `cargo run -- features --deps`
     //
     // well, no, but search for childs where name are in Optionals, and print them in cyan.
@@ -195,9 +206,9 @@ pub fn build_package(
             // we don't want to check here if this optional dep is globally active
             active: export_features.iter().any(|f| {
                 f.active
-                    && f.childs
-                        .iter()
-                        .any(|c| c.eq(format!("dep:{}", d.package_name()).as_str()))
+                    && f.childs.iter().any(|c| {
+                        clean_feature_name(&c.name).eq(&clean_feature_name(&d.package_name()))
+                    })
             }),
         })
         .collect();
@@ -211,6 +222,15 @@ pub fn build_package(
         features: export_features,
         optionals,
     })
+}
+
+fn clean_feature_name(name: &str) -> String {
+    name.replace("dep:", "")
+        .split(|c| c == '?' || c == '/')
+        .collect::<Vec<&str>>()
+        .first()
+        .expect("feature name should not have been empty")
+        .to_string()
 }
 
 pub fn is_globally_active(ws_resolve: &WorkspaceResolve, package_id: &PackageId) -> Result<bool> {
