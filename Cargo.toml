@@ -4,9 +4,9 @@ name = "cargo-features"
 version = "0.1.0"
 
 [dependencies]
-anyhow = "1.0.68"
-cargo = "0.67.0"
-clap = { version = "4.0.32", features = ["derive"] }
+anyhow = "1.0.71"
+cargo = "0.70.1"
+clap = { version = "4.2.5", features = ["derive"] }
 colored = "2.0.0"
-semver = "1.0.16"
-toml = "0.5.10"
+semver = "1.0.17"
+toml = "0.7.3"
