@@ -5,8 +5,8 @@ version = "0.1.0"
 
 [dependencies]
 anyhow = "1.0.71"
-cargo = "0.70.1"
-clap = { version = "4.2.5", features = ["derive"] }
+cargo = "0.71.0"
+clap = { version = "4.3.4", features = ["derive"] }
 colored = "2.0.0"
 semver = "1.0.17"
-toml = "0.7.3"
+toml = "0.7.4"
