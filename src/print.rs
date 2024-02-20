@@ -16,19 +16,19 @@ const LIGHT_GREY: Color = Color::TrueColor {
 pub fn pretty_print(mut export_info: export_info::ExportInfo) {
     let globally_active = export_info.root_package.globally_active;
 
-    pretty_print_package(export_info.root_package);
+    pretty_print_package(&mut export_info.root_package);
 
     if !globally_active {
         return;
     }
 
     export_info.dependencies.sort();
-    export_info.dependencies.into_iter().for_each(|dependency| {
+    export_info.dependencies.iter_mut().for_each(|dependency| {
         pretty_print_package(dependency);
     });
 }
 
-pub fn pretty_print_package(package: export_info::Package) {
+pub fn pretty_print_package(package: &mut export_info::Package) {
     let crate_color = if package.globally_active {
         Color::Green
     } else {
@@ -38,7 +38,7 @@ pub fn pretty_print_package(package: export_info::Package) {
     // Print version (if active)
     print!(
         "{}",
-        format!("`{}`", package.name.bold())
+        format!("{}", package.name.bold())
             .color(crate_color)
             .underline(),
     );
@@ -78,11 +78,11 @@ pub fn pretty_print_package(package: export_info::Package) {
         return;
     }
 
-    pretty_print_features(package.features);
-    pretty_print_optionals(package.optionals);
+    pretty_print_features(&mut package.features);
+    pretty_print_optionals(&mut package.optionals);
 }
 
-fn pretty_print_features(mut features: Vec<Feature>) {
+fn pretty_print_features(features: &mut [Feature]) {
     features.sort();
     features
         .iter()
@@ -121,7 +121,7 @@ fn pretty_print_features(mut features: Vec<Feature>) {
         });
 }
 
-fn pretty_print_optionals(mut optionals: Vec<Optional>) {
+fn pretty_print_optionals(optionals: &mut [Optional]) {
     optionals.sort();
     optionals.iter().for_each(|optional| {
         if optional.active {

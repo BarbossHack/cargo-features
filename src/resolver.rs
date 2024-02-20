@@ -26,13 +26,13 @@ pub fn build_ws_resolve<'cfg>(
 ) -> Result<WorkspaceResolve<'cfg>> {
     let ws = Workspace::new(Path::new(&manifest_path), config)?;
     // TODO: check that CompileKind::Host is the right thing (try to add a dep in cfg(target anroid))
-    let requested_kinds = &vec![CompileKind::Host];
-    let target_data = RustcTargetData::new(&ws, requested_kinds)?;
+    let requested_kinds = &[CompileKind::Host];
+    let mut target_data = RustcTargetData::new(&ws, requested_kinds)?;
     let cli_features =
         CliFeatures::from_command_line(&features, all_features, uses_default_features)?;
     let ws_resolve = cargo::ops::resolve_ws_with_opts(
         &ws,
-        &target_data,
+        &mut target_data,
         requested_kinds,
         &cli_features,
         &[PackageIdSpec::parse(
@@ -40,6 +40,7 @@ pub fn build_ws_resolve<'cfg>(
         )?],
         HasDevUnits::No,
         ForceAllTargets::No,
+        None,
     )?;
     Ok(ws_resolve)
 }
@@ -114,8 +115,8 @@ pub fn build_export_info(
                         optional: dep.is_optional(),
                         active: false,
                         globally_active: false,
-                        features: vec![],
-                        optionals: vec![],
+                        features: Vec::new(),
+                        optionals: Vec::new(),
                     },
                 };
                 export_dependencies.push(export_dependency);
@@ -152,7 +153,7 @@ pub fn build_package(
         .activated_features_unverified(package.package_id(), FeaturesFor::NormalOrDev)
     {
         Some(activated_features) => activated_features.iter().map(|i| i.to_string()).collect(),
-        None => vec![],
+        None => Vec::new(),
     };
 
     let export_features: Vec<Feature> = available_features

@@ -23,7 +23,7 @@ pub struct Features {
         value_delimiter = ',',
         help = "Comma separated list of features to activate"
     )]
-    pub features: Option<Vec<String>>,
+    pub features: Vec<String>,
 
     #[arg(long, help = "Activate all available features")]
     pub all_features: bool,
